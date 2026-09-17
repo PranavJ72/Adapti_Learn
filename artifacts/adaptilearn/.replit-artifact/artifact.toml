@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Adaptilearn"
+description = "An adaptive learning workspace for Computer Science Fundamentals that adjusts lesson explanations, practice, and remediation to each learner's mastery, interests, and friction signals."
+version = "1.0.0"
+id = "artifacts/adaptilearn"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18137
+
+[services.development]
+run = "pnpm --filter @workspace/adaptilearn run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/adaptilearn", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/adaptilearn/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18137"
+BASE_PATH = "/"

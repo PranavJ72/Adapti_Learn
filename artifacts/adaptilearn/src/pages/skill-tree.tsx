@@ -1,0 +1,28 @@
+import { Link } from 'wouter';
+import { getListConceptsQueryKey, useGetDashboard, useListConcepts } from '@workspace/api-client-react';
+import { ArrowLeft, ArrowUpRight, LockKeyhole, Network, Sparkles } from 'lucide-react';
+import { AppShell, ErrorPanel, LoadingPanel, PageHeading, StatusPill } from '@/components/app-shell';
+
+export default function SkillTree() {
+  const query = useGetDashboard();
+  const conceptsQuery = useListConcepts({ query: { queryKey: getListConceptsQueryKey() } });
+  const data = query.data;
+  if (query.isLoading) return <AppShell><LoadingPanel label="Mapping your prerequisites" /></AppShell>;
+  if (query.isError || !data) return <AppShell><ErrorPanel onRetry={() => query.refetch()} /></AppShell>;
+  const nodes = data.skillNodes;
+  return (
+    <AppShell>
+      <div className="mb-6"><Link href="/" data-testid="link-back-dashboard" className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground transition hover:text-primary"><ArrowLeft size={16} /> Back to overview</Link></div>
+      <PageHeading eyebrow="Prerequisite map" title="The shape of what you know." detail="Every node is a launch point. Unlocking the right small idea makes the larger ideas feel less mysterious." action={<div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold"><Network size={15} className="text-primary" /> {Math.max(nodes.length, conceptsQuery.data?.length || 0)} concepts mapped</div>} />
+      <div className="mb-5 flex flex-wrap gap-2">{[['mastered', 'Solid'], ['in_progress', 'In motion'], ['needs_review', 'Revisit'], ['locked', 'Locked']].map(([key, label]) => <div key={key} className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2"><span className={`h-2 w-2 rounded-full ${key === 'mastered' ? 'bg-emerald-500' : key === 'in_progress' ? 'bg-primary' : key === 'needs_review' ? 'bg-accent' : 'bg-muted-foreground/35'}`} /><span className="font-mono-ui text-[10px] uppercase tracking-[0.1em] text-muted-foreground">{label}</span></div>)}</div>
+      <section data-testid="card-full-skill-tree" className="relative min-h-[640px] overflow-hidden rounded-3xl border border-border bg-card bg-grid p-5 shadow-sm sm:p-8">
+        <div className="absolute left-7 top-7 flex items-center gap-2 rounded-lg bg-card/90 px-3 py-2 backdrop-blur"><Sparkles size={15} className="text-secondary-foreground" /><span className="font-mono-ui text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Foundation → fluency</span></div>
+        {nodes.length ? <div className="relative min-h-[590px] w-full">{nodes.map((node) => <div key={node.id} data-testid={`skill-node-${node.id}`} className="absolute w-[150px] -translate-x-1/2 -translate-y-1/2 sm:w-[190px]" style={{ left: `${Math.min(88, Math.max(12, node.x))}%`, top: `${Math.min(86, Math.max(14, node.y))}%` }}><div className={`group relative rounded-2xl border p-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${node.status === 'mastered' ? 'border-emerald-300 bg-emerald-50' : node.status === 'in_progress' ? 'border-primary/50 bg-primary/5' : node.status === 'needs_review' ? 'border-accent/40 bg-accent/5' : 'border-border bg-muted/60'}`}><div className="mb-3 flex items-center justify-between"><span className={`flex h-7 w-7 items-center justify-center rounded-lg ${node.status === 'locked' ? 'bg-muted text-muted-foreground' : 'bg-card text-primary'}`}>{node.status === 'locked' ? <LockKeyhole size={14} /> : <Network size={14} />}</span><StatusPill status={node.status} /></div><p className="font-display text-sm font-bold leading-tight">{node.label}</p><div className="mt-3 flex items-center justify-between font-mono-ui text-[10px] text-muted-foreground"><span>Level {node.competencyLevel}</span><span>{node.status === 'mastered' ? 'ready' : node.status === 'locked' ? 'gated' : 'next'}</span></div></div></div>)}</div> : <div data-testid="empty-skill-tree" className="flex min-h-[560px] items-center justify-center text-center"><div><div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-primary"><Network size={22} /></div><h2 className="font-display text-xl font-bold">Your map is still forming</h2><p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">Finish the learner setup and your first concepts will appear here with their prerequisites.</p></div></div>}
+      </section>
+      <section className="mt-5 grid gap-5 md:grid-cols-2">
+        <div data-testid="card-next-frontier" className="rounded-3xl bg-primary p-7 text-primary-foreground"><p className="font-mono-ui text-[10px] uppercase tracking-[0.16em] text-primary-foreground/60">Next frontier</p><h2 className="mt-2 font-display text-2xl font-bold">{data.activeConcept.title}</h2><p className="mt-3 text-sm leading-6 text-primary-foreground/75">This is the active node in your path. A short explanation and one checkpoint can move it forward.</p><Link href="/learn" data-testid="link-tree-learn" className="mt-5 inline-flex items-center gap-2 rounded-xl bg-secondary px-4 py-3 text-sm font-bold text-secondary-foreground">Open lesson <ArrowUpRight size={15} /></Link></div>
+        <div data-testid="card-prerequisites" className="rounded-3xl border border-border bg-card p-7"><p className="font-mono-ui text-[10px] uppercase tracking-[0.16em] text-primary/70">Reading the map</p><h2 className="mt-2 font-display text-2xl font-bold">Prerequisites are signals, not walls.</h2><p className="mt-3 text-sm leading-6 text-muted-foreground">A locked node simply means another concept deserves your attention first. Mastery grows through the connection between them.</p></div>
+      </section>
+    </AppShell>
+  );
+}

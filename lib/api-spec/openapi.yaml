@@ -1,0 +1,335 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: learner
+    description: Learner progress and adaptive path operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [learner]
+      summary: Get learner dashboard
+      description: Returns the current learner snapshot, active concept, skill tree, insights, and recent activity.
+      responses:
+        "200":
+          description: Learner dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+  /concepts:
+    get:
+      operationId: listConcepts
+      tags: [learner]
+      summary: List course concepts
+      responses:
+        "200":
+          description: Course concepts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Concept"
+  /profile:
+    get:
+      operationId: getProfile
+      tags: [learner]
+      summary: Get learner profile
+      responses:
+        "200":
+          description: Learner profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+    patch:
+      operationId: updateProfile
+      tags: [learner]
+      summary: Update learner preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: Updated learner profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+  /generate-lesson:
+    post:
+      operationId: generateLesson
+      tags: [learner]
+      summary: Generate an interest-based lesson
+      description: Creates an adaptive explanation for a concept, using a learner's interest lens and competency.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LessonRequest"
+      responses:
+        "200":
+          description: Adaptive lesson
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lesson"
+  /attempts:
+    post:
+      operationId: submitAttempt
+      tags: [learner]
+      summary: Submit a concept assessment attempt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttemptInput"
+      responses:
+        "200":
+          description: Assessment result and next step
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttemptResult"
+  /friction-events:
+    post:
+      operationId: logFrictionEvent
+      tags: [learner]
+      summary: Record a learner friction signal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FrictionEventInput"
+      responses:
+        "200":
+          description: Updated friction state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FrictionEventResult"
+  /diagnostic:
+    post:
+      operationId: submitDiagnostic
+      tags: [learner]
+      summary: Submit the onboarding micro-diagnostic
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DiagnosticInput"
+      responses:
+        "200":
+          description: Diagnostic result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiagnosticResult"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    UserProfile:
+      type: object
+      required: [id, name, email, preferredStyle, interestLens, masteryScore, streakDays, minutesLearned]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string, format: email }
+        preferredStyle: { type: string, enum: [text, visual, code, audio] }
+        interestLens: { type: string, enum: [Gaming, Sports, Finance, Music, Sci-Fi] }
+        masteryScore: { type: number, format: float }
+        streakDays: { type: integer }
+        minutesLearned: { type: integer }
+    ProfileUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        preferredStyle: { type: string, enum: [text, visual, code, audio] }
+        interestLens: { type: string, enum: [Gaming, Sports, Finance, Music, Sci-Fi] }
+    Concept:
+      type: object
+      required: [id, title, description, difficultyLevel, status, competencyLevel, progress, prerequisiteIds, estimatedMinutes]
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        description: { type: string }
+        difficultyLevel: { type: integer, minimum: 1, maximum: 5 }
+        status: { type: string, enum: [mastered, in_progress, needs_review, locked] }
+        competencyLevel: { type: number, format: float }
+        progress: { type: integer, minimum: 0, maximum: 100 }
+        prerequisiteIds:
+          type: array
+          items: { type: integer }
+        estimatedMinutes: { type: integer }
+    SkillNode:
+      type: object
+      required: [id, label, status, competencyLevel, x, y]
+      properties:
+        id: { type: integer }
+        label: { type: string }
+        status: { type: string, enum: [mastered, in_progress, needs_review, locked] }
+        competencyLevel: { type: number, format: float }
+        x: { type: integer }
+        y: { type: integer }
+    Insight:
+      type: object
+      required: [eyebrow, title, body, tone]
+      properties:
+        eyebrow: { type: string }
+        title: { type: string }
+        body: { type: string }
+        tone: { type: string, enum: [positive, focus, neutral] }
+    Activity:
+      type: object
+      required: [id, label, detail, timestamp, kind]
+      properties:
+        id: { type: integer }
+        label: { type: string }
+        detail: { type: string }
+        timestamp: { type: string, format: date-time }
+        kind: { type: string, enum: [lesson, quiz, remediation, milestone] }
+    Dashboard:
+      type: object
+      required: [profile, activeConcept, concepts, skillNodes, insights, recentActivity, courseProgress]
+      properties:
+        profile: { $ref: "#/components/schemas/UserProfile" }
+        activeConcept: { $ref: "#/components/schemas/Concept" }
+        concepts:
+          type: array
+          items: { $ref: "#/components/schemas/Concept" }
+        skillNodes:
+          type: array
+          items: { $ref: "#/components/schemas/SkillNode" }
+        insights:
+          type: array
+          items: { $ref: "#/components/schemas/Insight" }
+        recentActivity:
+          type: array
+          items: { $ref: "#/components/schemas/Activity" }
+        courseProgress: { type: integer, minimum: 0, maximum: 100 }
+    LessonRequest:
+      type: object
+      required: [conceptId, userInterest, competencyLevel]
+      properties:
+        conceptId: { type: integer }
+        userInterest: { type: string, enum: [Gaming, Sports, Finance, Music, Sci-Fi] }
+        competencyLevel: { type: number, format: float, minimum: 0, maximum: 1 }
+    Lesson:
+      type: object
+      required: [conceptId, title, eyebrow, summary, analogy, keyPoints, codeExample, question, source]
+      properties:
+        conceptId: { type: integer }
+        title: { type: string }
+        eyebrow: { type: string }
+        summary: { type: string }
+        analogy: { type: string }
+        keyPoints:
+          type: array
+          items: { type: string }
+        codeExample: { type: string }
+        question:
+          type: object
+          required: [prompt, options, correctOption, microNode]
+          properties:
+            prompt: { type: string }
+            options:
+              type: array
+              items: { type: string }
+            correctOption: { type: integer }
+            microNode: { type: string }
+        source: { type: string, enum: [generated, fallback] }
+    AttemptInput:
+      type: object
+      required: [conceptId, selectedOption, correctOption, timeSpentSeconds, switches]
+      properties:
+        conceptId: { type: integer }
+        selectedOption: { type: integer }
+        correctOption: { type: integer }
+        timeSpentSeconds: { type: integer, minimum: 0 }
+        switches: { type: integer, minimum: 0 }
+    AttemptResult:
+      type: object
+      required: [correct, message, competencyLevel, masteryScore, nextAction, remediation]
+      properties:
+        correct: { type: boolean }
+        message: { type: string }
+        competencyLevel: { type: number, format: float }
+        masteryScore: { type: number, format: float }
+        nextAction: { type: string, enum: [continue, remediate, review] }
+        remediation:
+          type: ["object", "null"]
+          properties:
+            title: { type: string }
+            body: { type: string }
+            microNode: { type: string }
+            durationSeconds: { type: integer }
+    FrictionEventInput:
+      type: object
+      required: [conceptId, kind, value]
+      properties:
+        conceptId: { type: integer }
+        kind: { type: string, enum: [answer_switching, idle_time, hint_requested] }
+        value: { type: integer, minimum: 0 }
+    FrictionEventResult:
+      type: object
+      required: [frictionScore, helperRecommended, helperTitle, helperBody]
+      properties:
+        frictionScore: { type: integer }
+        helperRecommended: { type: boolean }
+        helperTitle: { type: string }
+        helperBody: { type: string }
+    DiagnosticInput:
+      type: object
+      required: [answers, elapsedSeconds]
+      properties:
+        answers:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items: { type: integer, minimum: 0, maximum: 3 }
+        elapsedSeconds: { type: integer, minimum: 0 }
+    DiagnosticResult:
+      type: object
+      required: [preferredStyle, interestLens, baselineCompetency, welcomeMessage]
+      properties:
+        preferredStyle: { type: string, enum: [text, visual, code, audio] }
+        interestLens: { type: string, enum: [Gaming, Sports, Finance, Music, Sci-Fi] }
+        baselineCompetency: { type: number, format: float }
+        welcomeMessage: { type: string }
+
